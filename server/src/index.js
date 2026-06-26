@@ -9,11 +9,9 @@ app.use(express.json());
 // routes
 const ivrRouter = require('./routes/ivr');
 const adminRouter = require('./routes/admin');
-const setupRouter = require('./routes/setup');
 
 app.use('/ivr', ivrRouter);
 app.use('/admin', adminRouter);
-app.use('/setup', setupRouter);
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
