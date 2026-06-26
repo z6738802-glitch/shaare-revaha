@@ -66,7 +66,7 @@ router.get('/book', async (req, res) => {
   const { ApiPhone, RIDE, SEATS, ApiTime } = req.query;
 
   if (!ApiPhone || !RIDE || !SEATS) {
-    return res.send('id_list_message=f-/32/006.');
+    return res.send('id_list_message=f-/32/006');
   }
 
   const rideId = parseInt(RIDE);
@@ -76,7 +76,7 @@ router.get('/book', async (req, res) => {
   // בדיקה שהנסיעה קיימת
   const ride = RIDES.find(r => r.id === rideId);
   if (!ride) {
-    return res.send('id_list_message=f-/32/006.');
+    return res.send('id_list_message=f-/32/006');
   }
 
   // בדיקת חלון הזמן
@@ -86,7 +86,7 @@ router.get('/book', async (req, res) => {
 
   if (!canBook(ride.departure_time, window, ApiTime)) {
     // מחוץ לחלון הזמן — 32/007 "ההזמנה נסגרה לשעה זו"
-    return res.send('id_list_message=f-/32/007.');
+    return res.send('id_list_message=f-/32/007');
   }
 
   // בדיקת מושבים כלליים בנסיעה
@@ -103,7 +103,7 @@ router.get('/book', async (req, res) => {
   if (available <= 0) {
     // אין מקום — או שהנסיעה מלאה או שהטלפון מיצה את המכסה
     // 32/000 = "הנסיעה מלאה"
-    return res.send('id_list_message=f-/32/000.');
+    return res.send('id_list_message=f-/32/000');
   }
 
   if (available < seats) {
@@ -129,7 +129,7 @@ router.get('/neighborhood', (req, res) => {
   const { NEIGHBORHOOD } = req.query;
 
   if (!NEIGHBORHOOD) {
-    return res.send('id_list_message=f-/32/006.');
+    return res.send('id_list_message=f-/32/006');
   }
 
   if (NEIGHBORHOOD === '1') {
@@ -158,11 +158,11 @@ router.get('/station', async (req, res) => {
     neighborhood = 'B';
     station = parseInt(BSTATION);
   } else {
-    return res.send('id_list_message=f-/32/006.');
+    return res.send('id_list_message=f-/32/006');
   }
 
   if (!ApiPhone || !RIDE || !SEATS) {
-    return res.send('id_list_message=f-/32/006.');
+    return res.send('id_list_message=f-/32/006');
   }
 
   const rideId = parseInt(RIDE);
@@ -171,7 +171,7 @@ router.get('/station', async (req, res) => {
 
   // בדיקת תקינות תחנה
   if (station < 1 || station > 12) {
-    return res.send('id_list_message=f-/32/006.');
+    return res.send('id_list_message=f-/32/006');
   }
 
   // שמירה עם נעילה למניעת concurrency
@@ -196,7 +196,7 @@ router.get('/station', async (req, res) => {
 
     if (TOTAL_SEATS - taken < seats) {
       await client.query('ROLLBACK');
-      return res.send('id_list_message=f-/32/000.');
+      return res.send('id_list_message=f-/32/000');
     }
 
     // יצירת קוד אישור ייחודי
@@ -213,12 +213,12 @@ router.get('/station', async (req, res) => {
     await client.query('COMMIT');
 
     // 32/005 = "הזמנה נקלטה בהצלחה מספר הזמנה הוא" + הקראת המספר
-    return res.send(`id_list_message=f-/32/005.n-${bookingCode}.`);
+    return res.send(`id_list_message=f-/32/005.n-${bookingCode}`);
 
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('booking error:', err.message);
-    return res.send('id_list_message=f-/32/006.');
+    return res.send('id_list_message=f-/32/006');
   } finally {
     client.release();
   }
@@ -236,7 +236,7 @@ router.get('/cancel-find', async (req, res) => {
   const { ApiPhone, CANCEL_CODE, ApiTime } = req.query;
 
   if (!ApiPhone || !CANCEL_CODE) {
-    return res.send('id_list_message=f-/32/006.');
+    return res.send('id_list_message=f-/32/006');
   }
 
   const code = String(CANCEL_CODE).padStart(4, '0');
@@ -252,7 +252,7 @@ router.get('/cancel-find', async (req, res) => {
 
   if (find.rows.length === 0) {
     // לא נמצאה הזמנה — 32/011 "לא נמצאו נסיעות"
-    return res.send('id_list_message=f-/32/011.');
+    return res.send('id_list_message=f-/32/011');
   }
 
   const ride = RIDES.find(r => r.id === find.rows[0].ride_id);
@@ -260,7 +260,7 @@ router.get('/cancel-find', async (req, res) => {
   // בדיקת חלון ביטול
   if (!canCancel(ride.departure_time, ApiTime)) {
     // מאוחר מדי — 32/007
-    return res.send('id_list_message=f-/32/007.');
+    return res.send('id_list_message=f-/32/007');
   }
 
   // נמצאה ותקינה — שאל אישור (32/012 "למחיקה הקישו 1 לביטול וחזרה הקישו 2")
@@ -275,12 +275,12 @@ router.get('/cancel', async (req, res) => {
   const { ApiPhone, CANCEL_CODE, CONFIRM, ApiTime } = req.query;
 
   if (!ApiPhone || !CANCEL_CODE || !CONFIRM) {
-    return res.send('id_list_message=f-/32/006.');
+    return res.send('id_list_message=f-/32/006');
   }
 
   // אם בחר 2 (ביטול וחזרה) — לא מוחקים, רק שלום
   if (CONFIRM !== '1') {
-    return res.send('id_list_message=f-/32/004.');
+    return res.send('id_list_message=f-/32/004');
   }
 
   const code = String(CANCEL_CODE).padStart(4, '0');
@@ -295,14 +295,14 @@ router.get('/cancel', async (req, res) => {
   );
 
   if (find.rows.length === 0) {
-    return res.send('id_list_message=f-/32/011.');
+    return res.send('id_list_message=f-/32/011');
   }
 
   const booking = find.rows[0];
   const ride = RIDES.find(r => r.id === booking.ride_id);
 
   if (!canCancel(ride.departure_time, ApiTime)) {
-    return res.send('id_list_message=f-/32/007.');
+    return res.send('id_list_message=f-/32/007');
   }
 
   // ביצוע הביטול
@@ -314,7 +314,7 @@ router.get('/cancel', async (req, res) => {
   );
 
   // 32/013 = "ההזמנה נמחקה בהצלחה"
-  return res.send('id_list_message=f-/32/013.');
+  return res.send('id_list_message=f-/32/013');
 });
 
 module.exports = router;
