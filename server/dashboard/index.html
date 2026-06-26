@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>שערי רווחה — ממשק נהג</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1419;
+    --surface: #1a2129;
+    --surface-2: #232c37;
+    --border: #2e3a47;
+    --text: #e8edf2;
+    --text-dim: #8b9aa9;
+    --accent: #4a9d7f;
+    --accent-dim: #2f6b56;
+    --beitar: #4a9d7f;
+    --hadassah: #c8915a;
+    --radius: 14px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    direction: rtl;
+    text-align: right;
+    font-family: 'Heebo', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ===== Login ===== */
+  .login-wrap {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 40px 32px;
+    width: 100%;
+    max-width: 380px;
+    text-align: center;
+  }
+  .login-card .logo {
+    width: 56px; height: 56px;
+    margin: 0 auto 20px;
+    color: var(--accent);
+  }
+  .login-card h1 { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+  .login-card p { color: var(--text-dim); font-size: 15px; margin-bottom: 28px; }
+  .field { margin-bottom: 16px; text-align: right; }
+  .field input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 16px;
+    text-align: right;
+    transition: border-color .15s;
+  }
+  .field input:focus { outline: none; border-color: var(--accent); }
+  .remember {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 22px; cursor: pointer;
+    color: var(--text-dim); font-size: 14px;
+    justify-content: flex-start;
+  }
+  .remember input { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+  .btn {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .btn:hover { background: var(--accent-dim); }
+  .btn:disabled { opacity: .6; cursor: default; }
+  .login-error {
+    color: #e07a7a; font-size: 14px; margin-top: 14px;
+    min-height: 18px;
+  }
+
+  /* ===== Dashboard ===== */
+  .dash { display: none; max-width: 760px; margin: 0 auto; padding: 20px 16px 60px; }
+  .dash.active { display: block; }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; padding-top: 8px;
+  }
+  .topbar .brand { display: flex; align-items: center; gap: 10px; }
+  .topbar .brand svg { color: var(--accent); width: 28px; height: 28px; }
+  .topbar .brand h1 { font-size: 20px; font-weight: 700; }
+  .logout {
+    background: none; border: 1px solid var(--border);
+    color: var(--text-dim); border-radius: 8px;
+    padding: 8px 14px; font-family: inherit; font-size: 14px;
+    cursor: pointer; transition: all .15s;
+  }
+  .logout:hover { border-color: var(--accent); color: var(--text); }
+
+  .date-line {
+    color: var(--text-dim); font-size: 15px; margin-bottom: 20px;
+    font-weight: 500;
+  }
+  .date-line strong { color: var(--text); font-weight: 600; }
+
+  .ride {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .ride-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 18px;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .ride-head:hover { background: var(--surface-2); }
+  .ride-info { display: flex; align-items: center; gap: 14px; }
+  .ride-time {
+    font-size: 22px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .5px;
+  }
+  .ride-dir {
+    font-size: 13px; font-weight: 600;
+    padding: 4px 10px; border-radius: 20px;
+  }
+  .ride-dir.beitar { background: rgba(74,157,127,.15); color: var(--beitar); }
+  .ride-dir.hadassah { background: rgba(200,145,90,.15); color: var(--hadassah); }
+  .ride-count {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 15px; font-weight: 600;
+  }
+  .seats-badge {
+    background: var(--surface-2);
+    padding: 5px 12px; border-radius: 20px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-dim);
+  }
+  .seats-badge.has { color: var(--accent); background: rgba(74,157,127,.12); }
+
+  .passengers { display: none; border-top: 1px solid var(--border); }
+  .passengers.open { display: block; }
+  .pax {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .pax:last-child { border-bottom: none; }
+  .pax-station { font-weight: 500; flex: 1; }
+  .pax-meta {
+    display: flex; align-items: center; gap: 16px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .pax-phone { direction: ltr; }
+  .pax-seats {
+    color: var(--accent); font-weight: 600;
+    min-width: 44px; text-align: center;
+  }
+  .pax-code {
+    background: var(--bg); padding: 3px 9px; border-radius: 6px;
+    font-size: 13px; font-variant-numeric: tabular-nums;
+    color: var(--text-dim);
+  }
+  .empty-pax { padding: 20px 18px; color: var(--text-dim); font-size: 14px; text-align: center; }
+
+  .loading, .error-box {
+    text-align: center; padding: 40px 20px; color: var(--text-dim);
+  }
+  .error-box { color: #e07a7a; }
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-card">
+    <svg class="logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/>
+      <path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.6 6.8 19.9 6 19 6H5c-.9 0-1.6.8-1.8 1.6l-1.4 5c-.1.4-.2.8-.2 1.2 0 .4.1.8.2 1.2C2.5 16.3 3 18 3 18h3"/>
+      <circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>
+    </svg>
+    <h1>שערי רווחה</h1>
+    <p>ממשק נהג</p>
+    <div class="field">
+      <input type="password" id="pw" placeholder="סיסמה" autocomplete="current-password">
+    </div>
+    <label class="remember">
+      <input type="checkbox" id="remember" checked>
+      <span>זכור אותי</span>
+    </label>
+    <button class="btn" id="loginBtn">כניסה</button>
+    <div class="login-error" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- Dashboard -->
+<div class="dash" id="dash">
+  <div class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/>
+        <path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.6 6.8 19.9 6 19 6H5c-.9 0-1.6.8-1.8 1.6l-1.4 5c-.1.4-.2.8-.2 1.2 0 .4.1.8.2 1.2C2.5 16.3 3 18 3 18h3"/>
+        <circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>
+      </svg>
+      <h1>שערי רווחה</h1>
+    </div>
+    <button class="logout" id="logoutBtn">יציאה</button>
+  </div>
+  <div class="date-line" id="dateLine"></div>
+  <div id="ridesContainer"></div>
+</div>
+
+<script>
+  const API = '';
+  const STORE_KEY = 'sr_driver_token';
+
+  let token = sessionStorage.getItem(STORE_KEY) || localStorage.getItem(STORE_KEY) || null;
+
+  const $ = id => document.getElementById(id);
+
+  // ===== Login =====
+  async function doLogin() {
+    const pw = $('pw').value.trim();
+    const remember = $('remember').checked;
+    if (!pw) return;
+    $('loginBtn').disabled = true;
+    $('loginErr').textContent = '';
+    try {
+      const r = await fetch(API + '/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw }),
+      });
+      if (!r.ok) {
+        $('loginErr').textContent = 'סיסמה שגויה';
+        $('loginBtn').disabled = false;
+        return;
+      }
+      const data = await r.json();
+      token = data.token;
+      if (remember) localStorage.setItem(STORE_KEY, token);
+      else sessionStorage.setItem(STORE_KEY, token);
+      showDash();
+    } catch (e) {
+      $('loginErr').textContent = 'שגיאת חיבור, נסו שוב';
+      $('loginBtn').disabled = false;
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem(STORE_KEY);
+    sessionStorage.removeItem(STORE_KEY);
+    token = null;
+    $('dash').classList.remove('active');
+    $('loginWrap').style.display = 'flex';
+    $('pw').value = '';
+    $('loginBtn').disabled = false;
+  }
+
+  // ===== Dashboard =====
+  async function showDash() {
+    $('loginWrap').style.display = 'none';
+    $('dash').classList.add('active');
+    await loadRides();
+  }
+
+  function fmtDate(iso) {
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  function dirClass(dir) { return dir === 'beitar_hadassah' ? 'beitar' : 'hadassah'; }
+  function dirLabel(dir) { return dir === 'beitar_hadassah' ? 'ביתר ← הדסה' : 'הדסה ← ביתר'; }
+
+  async function loadRides() {
+    const c = $('ridesContainer');
+    c.innerHTML = '<div class="loading">טוען נסיעות…</div>';
+    try {
+      const r = await fetch(API + '/admin/driver', { headers: { 'x-auth': token } });
+      if (r.status === 401) { logout(); return; }
+      if (!r.ok) throw new Error();
+      const data = await r.json();
+      $('dateLine').innerHTML = 'נסיעות ל<strong>' + fmtDate(data.date) + '</strong>';
+      renderRides(data.rides);
+    } catch (e) {
+      c.innerHTML = '<div class="error-box">לא ניתן לטעון את הנסיעות. רעננו את העמוד.</div>';
+    }
+  }
+
+  function renderRides(rides) {
+    const c = $('ridesContainer');
+    c.innerHTML = '';
+    rides.forEach(ride => {
+      const hasSeats = ride.seats_taken > 0;
+      const div = document.createElement('div');
+      div.className = 'ride';
+
+      const paxRows = ride.passengers.length
+        ? ride.passengers.map(p => `
+            <div class="pax">
+              <span class="pax-station">${p.station_name}</span>
+              <span class="pax-meta">
+                <span class="pax-seats">${p.seats_count} מק'</span>
+                <span class="pax-phone">${p.phone}</span>
+                <span class="pax-code">${p.booking_code}</span>
+              </span>
+            </div>`).join('')
+        : '<div class="empty-pax">אין הזמנות לנסיעה זו</div>';
+
+      div.innerHTML = `
+        <div class="ride-head">
+          <div class="ride-info">
+            <span class="ride-time">${ride.departure_time}</span>
+            <span class="ride-dir ${dirClass(ride.direction)}">${dirLabel(ride.direction)}</span>
+          </div>
+          <div class="ride-count">
+            <span class="seats-badge ${hasSeats ? 'has' : ''}">${ride.seats_taken} / 16</span>
+          </div>
+        </div>
+        <div class="passengers">${paxRows}</div>
+      `;
+
+      const head = div.querySelector('.ride-head');
+      const pax = div.querySelector('.passengers');
+      head.addEventListener('click', () => pax.classList.toggle('open'));
+
+      c.appendChild(div);
+    });
+  }
+
+  // ===== Events =====
+  $('loginBtn').addEventListener('click', doLogin);
+  $('pw').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  $('logoutBtn').addEventListener('click', logout);
+
+  // auto-login if token stored
+  if (token) showDash();
+</script>
+</body>
+</html>

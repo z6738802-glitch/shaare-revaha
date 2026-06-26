@@ -6,6 +6,27 @@ const pool = require('../db');
 const { RIDES, STATIONS_A, STATIONS_B } = require('../data');
 const { todayIL } = require('../time');
 
+// ────────────────────────────────────────────────
+// POST /admin/login — אימות סיסמת נהג
+// ────────────────────────────────────────────────
+router.post('/login', express.json(), (req, res) => {
+  const { password } = req.body || {};
+  const correct = process.env.DRIVER_PASSWORD || 'changeme';
+  if (password && password === correct) {
+    res.json({ success: true, token: correct });
+  } else {
+    res.status(401).json({ success: false });
+  }
+});
+
+// בדיקת token (header) — middleware
+function requireAuth(req, res, next) {
+  const token = req.headers['x-auth'] || req.query.token;
+  const correct = process.env.DRIVER_PASSWORD || 'changeme';
+  if (token === correct) return next();
+  res.status(401).json({ error: 'unauthorized' });
+}
+
 // עזר: שם נסיעה לפי id
 function rideLabel(rideId) {
   const ride = RIDES.find(r => r.id === rideId);
@@ -20,9 +41,55 @@ function stationName(neighborhood, stationId) {
 }
 
 // ────────────────────────────────────────────────
-// GET /admin/rides?date=YYYY-MM-DD
-// כל הנסיעות והסטטיסטיקות ליום מסוים
+// GET /admin/driver — תצוגת נהג: כל הנסיעות של היום + נוסעים
 // ────────────────────────────────────────────────
+router.get('/driver', requireAuth, async (req, res) => {
+  const date = req.query.date || todayIL();
+
+  try {
+    const result = await pool.query(
+      `SELECT ride_id, neighborhood, station, phone, seats_count, booking_code, created_at
+       FROM shaare_revaha.bookings
+       WHERE date = $1 AND status = 'active'
+       ORDER BY ride_id ASC, created_at ASC`,
+      [date]
+    );
+
+    // קבץ לפי נסיעה
+    const ridesMap = {};
+    RIDES.forEach(ride => {
+      ridesMap[ride.id] = {
+        id: ride.id,
+        label: ride.label,
+        direction: ride.direction,
+        departure_time: ride.departure_time,
+        seats_taken: 0,
+        passengers: [],
+      };
+    });
+
+    result.rows.forEach(b => {
+      const r = ridesMap[b.ride_id];
+      if (!r) return;
+      r.seats_taken += b.seats_count;
+      r.passengers.push({
+        phone: b.phone,
+        neighborhood: b.neighborhood,
+        station: b.station,
+        station_name: stationName(b.neighborhood, b.station),
+        seats_count: b.seats_count,
+        booking_code: b.booking_code,
+      });
+    });
+
+    res.json({ date, rides: Object.values(ridesMap) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+
 router.get('/rides', async (req, res) => {
   const date = req.query.date || todayIL();
 
