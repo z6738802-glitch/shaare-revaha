@@ -162,12 +162,17 @@ router.get('/station', async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // בדיקה סופית עם נעילה
+    // נעילת מרוץ לפי יום+נסיעה (advisory lock)
+    // מפתח: ride_id * 1000000 + DDMMYY
+    const dateKey = parseInt(date.slice(8, 10) + date.slice(5, 7) + date.slice(2, 4));
+    const lockKey = rideId * 1000000 + dateKey;
+    await client.query(`SELECT pg_advisory_xact_lock($1)`, [lockKey]);
+
+    // ספירת מושבים תפוסים אחרי הנעילה
     const check = await client.query(
       `SELECT COALESCE(SUM(seats_count), 0) AS taken
        FROM shaare_revaha.bookings
-       WHERE date = $1 AND ride_id = $2 AND status = 'active'
-       FOR UPDATE`,
+       WHERE date = $1 AND ride_id = $2 AND status = 'active'`,
       [date, rideId]
     );
     const taken = parseInt(check.rows[0].taken);
