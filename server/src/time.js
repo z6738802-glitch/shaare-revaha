@@ -2,14 +2,23 @@
 
 const TZ = 'Asia/Jerusalem';
 
-// תאריך היום בישראל (YYYY-MM-DD)
-function todayIL() {
-  return new Date().toLocaleDateString('en-CA', { timeZone: TZ });
+// המרת timestamp (שניות unix) לאובייקט Date, או עכשיו אם לא ניתן
+function toDate(apiTime) {
+  if (apiTime) {
+    const ts = parseInt(apiTime);
+    if (!isNaN(ts)) return new Date(ts * 1000);
+  }
+  return new Date();
+}
+
+// תאריך לפי ישראל (YYYY-MM-DD)
+function todayIL(apiTime) {
+  return toDate(apiTime).toLocaleDateString('en-CA', { timeZone: TZ });
 }
 
 // שעה נוכחית בישראל כ-HH:MM
-function nowTimeIL() {
-  return new Date().toLocaleTimeString('en-GB', {
+function nowTimeIL(apiTime) {
+  return toDate(apiTime).toLocaleTimeString('en-GB', {
     timeZone: TZ,
     hour: '2-digit',
     minute: '2-digit',
@@ -24,20 +33,18 @@ function timeToMinutes(hhmm) {
 }
 
 // בדיקה האם ניתן להזמין נסיעה (לפי חלון זמן)
-// windowMinutes = כמה דקות לפני הנסיעה ניתן להזמין
-function canBook(departureTime, windowMinutes) {
-  const now = timeToMinutes(nowTimeIL());
+function canBook(departureTime, windowMinutes, apiTime) {
+  const now = timeToMinutes(nowTimeIL(apiTime));
   const dep = timeToMinutes(departureTime);
   const diff = dep - now;
-  // ניתן להזמין: לא פחות מ-5 דקות לפני, לא יותר מ-window לפני
   return diff >= 5 && diff <= windowMinutes;
 }
 
 // בדיקה האם ניתן לבטל (לפחות 5 דקות לפני הנסיעה)
-function canCancel(departureTime) {
-  const now = timeToMinutes(nowTimeIL());
+function canCancel(departureTime, apiTime) {
+  const now = timeToMinutes(nowTimeIL(apiTime));
   const dep = timeToMinutes(departureTime);
   return dep - now >= 5;
 }
 
-module.exports = { todayIL, nowTimeIL, timeToMinutes, canBook, canCancel };
+module.exports = { todayIL, nowTimeIL, timeToMinutes, canBook, canCancel, toDate };
