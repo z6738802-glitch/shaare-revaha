@@ -89,13 +89,30 @@ router.get('/book', async (req, res) => {
     return res.send('id_list_message=f-32/007');
   }
 
-  // בדיקת מושבים כלליים
+  // בדיקת מושבים כלליים בנסיעה
   const taken = await takenSeats(rideId, date);
-  const available = TOTAL_SEATS - taken;
+  const rideAvailable = TOTAL_SEATS - taken;
+
+  // כמה הטלפון כבר הזמין לנסיעה זו, וכמה עוד מותר לו
+  const phoneBooked = await seatsForPhone(ApiPhone, rideId, date);
+  const phoneRemaining = MAX_SEATS_PER_PHONE - phoneBooked;
+
+  // הזמינות בפועל = המינימום בין השניים
+  const available = Math.min(rideAvailable, phoneRemaining);
+
+  if (available <= 0) {
+    // אין מקום — או שהנסיעה מלאה או שהטלפון מיצה את המכסה
+    // 32/000 = "הנסיעה מלאה"
+    return res.send('id_list_message=f-32/000');
+  }
 
   if (available < seats) {
-    // נסיעה מלאה — 32/000
-    return res.send('id_list_message=f-32/000');
+    // נשאר פחות ממה שביקש — בקש כמות קטנה יותר
+    // 32/001 = "נשאר מקום 1", 32/002 = "נשאר מקום 2"
+    const file = available === 1 ? '32/001' : '32/002';
+    return res.send(
+      `read=f-${file}=SEATS,,,,1,Number,yes,yes,,,,,,,,`
+    );
   }
 
   // הכל תקין — שאל גבעה (32/016 "איזה גבעה")
