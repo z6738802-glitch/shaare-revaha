@@ -146,11 +146,11 @@ router.get('/book', async (req, res) => {
   // ════════════════════════════════════════════
   if (NEIGHBORHOOD) {
     if (NEIGHBORHOOD === '1') {
-      // גבעה A — קובץ 32/014, תחנה מתיקיית ASTATION
-      return res.send('read=f-/32/014=ASTATION,,2,1,2,File,yes,yes,,,,Ok,,,,no,');
-    } else {
-      // גבעה B — קובץ 32/015, תחנה מתיקיית BSTATION
+      // הקשה 1 = גבעה B — קובץ 32/015, תחנה מתיקיית BSTATION
       return res.send('read=f-/32/015=BSTATION,,2,1,2,File,yes,yes,,,,Ok,,,,no,');
+    } else {
+      // הקשה 2 = גבעה A — קובץ 32/014, תחנה מתיקיית ASTATION
+      return res.send('read=f-/32/014=ASTATION,,2,1,2,File,yes,yes,,,,Ok,,,,no,');
     }
   }
 
