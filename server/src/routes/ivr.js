@@ -79,14 +79,14 @@ router.get('/book', async (req, res) => {
     return res.send('id_list_message=f-/32/006');
   }
 
-  // בדיקת חלון הזמן
+  // בדיקת חלון הזמן (מדלגים במצב טסט)
   const window = ride.direction === 'beitar_hadassah'
     ? BOOKING_WINDOW_BEITAR
     : BOOKING_WINDOW_HADASSAH;
 
-  if (!canBook(ride.departure_time, window, ApiTime)) {
-    // מחוץ לחלון הזמן — 32/007 "ההזמנה נסגרה לשעה זו"
-    return res.send('id_list_message=f-/32/007');
+  if (process.env.TEST_MODE !== 'on' && !canBook(ride.departure_time, window, ApiTime)) {
+    // מחוץ לחלון הזמן — 32/008 "ניתן להזמין מביתר שעה וחצי ומהדסה שעה"
+    return res.send('id_list_message=f-/32/008');
   }
 
   // בדיקת מושבים כלליים בנסיעה
@@ -258,7 +258,7 @@ router.get('/cancel-find', async (req, res) => {
   const ride = RIDES.find(r => r.id === find.rows[0].ride_id);
 
   // בדיקת חלון ביטול
-  if (!canCancel(ride.departure_time, ApiTime)) {
+  if (process.env.TEST_MODE !== 'on' && !canCancel(ride.departure_time, ApiTime)) {
     // מאוחר מדי — 32/007
     return res.send('id_list_message=f-/32/007');
   }
@@ -301,7 +301,7 @@ router.get('/cancel', async (req, res) => {
   const booking = find.rows[0];
   const ride = RIDES.find(r => r.id === booking.ride_id);
 
-  if (!canCancel(ride.departure_time, ApiTime)) {
+  if (process.env.TEST_MODE !== 'on' && !canCancel(ride.departure_time, ApiTime)) {
     return res.send('id_list_message=f-/32/007');
   }
 
