@@ -247,6 +247,7 @@
             </div>
             <div class="block">
               <div class="block-label">תגובה (Response)</div>
+              ${explainResponse(st.response) ? `<div style="color:var(--accent);font-size:13px;margin-bottom:8px;font-weight:600;">↳ ${explainResponse(st.response)}</div>` : ''}
               <div class="code resp-${t}">${st.response || '(ריק)'}</div>
             </div>
           </div>
@@ -262,7 +263,36 @@
     `;
   }
 
-  function toggleAuto() {
+  function explainResponse(resp) {
+    if (!resp) return 'אין תגובה';
+    if (resp.includes('32/000')) return 'נסיעה מלאה';
+    if (resp.includes('32/001')) return 'נשאר מקום 1 — בקשת כמות מחדש';
+    if (resp.includes('32/002')) return 'נשאר מקום 2 — בקשת כמות מחדש';
+    if (resp.includes('32/003')) return 'בקשת כמות מקומות';
+    if (resp.includes('32/004')) return 'שלום ולהתראות';
+    if (resp.includes('32/005')) return 'הזמנה נקלטה בהצלחה + קוד אישור';
+    if (resp.includes('32/006')) return 'שגיאה — שוב פעם';
+    if (resp.includes('32/007')) return 'ההזמנה נסגרה לשעה זו';
+    if (resp.includes('32/008')) return 'מחוץ לחלון הזמן';
+    if (resp.includes('32/009')) return 'נמצאה נסיעה בשעה';
+    if (resp.includes('32/010')) return 'כמות המקומות שהוזמנו';
+    if (resp.includes('32/011')) return 'לא נמצאה הזמנה';
+    if (resp.includes('32/012')) return 'אישור ביטול — למחיקה 1, לביטול 2';
+    if (resp.includes('32/013')) return 'הזמנה נמחקה בהצלחה';
+    if (resp.includes('32/014')) return 'שואל תחנה — גבעה A';
+    if (resp.includes('32/015')) return 'שואל תחנה — גבעה B';
+    if (resp.includes('32/016')) return 'שואל גבעה';
+    if (resp.includes('NEIGHBORHOOD')) return 'שואל גבעה';
+    if (resp.includes('ASTATION')) return 'שואל תחנה — גבעה A';
+    if (resp.includes('BSTATION')) return 'שואל תחנה — גבעה B';
+    if (resp.includes('SEATS')) return 'שואל כמות מקומות מחדש';
+    if (resp.includes('CANCEL_CODE')) return 'שואל קוד ביטול';
+    if (resp.includes('CONFIRM')) return 'שואל אישור ביטול';
+    if (resp.startsWith('read=')) return 'שואל קלט מהמתקשר';
+    if (resp.startsWith('id_list_message=')) return 'מנגן הודעה';
+    return '';
+  }
+
     autoRefresh = !autoRefresh;
     $('autoDot').style.background = autoRefresh ? 'var(--ok)' : 'var(--text-dim)';
     if (autoRefresh) autoTimer = setInterval(loadSessions, 3000); else stopAuto();
