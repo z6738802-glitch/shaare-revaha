@@ -4,21 +4,22 @@ const pool = require('./db');
 
 // יצירת טבלת הלוגים אם לא קיימת
 async function ensureLogTable() {
+  // שלב 1: טבלה בסיסית
   await pool.query(`
     CREATE TABLE IF NOT EXISTS shaare_revaha.ivr_logs (
       id          BIGSERIAL PRIMARY KEY,
-      call_id     TEXT,
       endpoint    TEXT NOT NULL,
       phone       TEXT,
       query       JSONB,
       response    TEXT,
       created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
-    CREATE INDEX IF NOT EXISTS idx_ivr_logs_created ON shaare_revaha.ivr_logs (created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_ivr_logs_call ON shaare_revaha.ivr_logs (call_id);
   `);
-  // הוספת העמודה אם הטבלה כבר קיימת בלעדיה
-  await pool.query(`ALTER TABLE shaare_revaha.ivr_logs ADD COLUMN IF NOT EXISTS call_id TEXT`).catch(()=>{});
+  // שלב 2: הוספת call_id (גם אם הטבלה כבר קיימת בלעדיה)
+  await pool.query(`ALTER TABLE shaare_revaha.ivr_logs ADD COLUMN IF NOT EXISTS call_id TEXT`);
+  // שלב 3: אינדקסים (אחרי שהעמודה קיימת בוודאות)
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ivr_logs_created ON shaare_revaha.ivr_logs (created_at DESC)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ivr_logs_call ON shaare_revaha.ivr_logs (call_id)`);
 }
 
 // רישום קריאה
