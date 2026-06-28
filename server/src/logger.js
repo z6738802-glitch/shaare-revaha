@@ -1,6 +1,6 @@
 'use strict';
 
-const pool = require('../db');
+const pool = require('./db');
 
 // יצירת טבלת הלוגים אם לא קיימת
 async function ensureLogTable() {
