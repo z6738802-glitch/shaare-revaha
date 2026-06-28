@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>שערי רווחה — פאנל מעקב</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #14171c;
+    --surface: #1c2127;
+    --surface-2: #252b33;
+    --border: #2d353f;
+    --text: #e6ebf0;
+    --text-dim: #8a97a5;
+    --accent: #5b8def;
+    --ok: #4caf82;
+    --err: #e0685f;
+    --warn: #d4a25a;
+    --mono: 'JetBrains Mono', monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    direction: rtl; text-align: right;
+    font-family: 'Heebo', sans-serif;
+    background: var(--bg); color: var(--text);
+    height: 100vh; overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Login */
+  .login-wrap { height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .login-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 36px 30px; width: 340px; text-align: center;
+  }
+  .login-card h1 { font-size: 21px; margin-bottom: 4px; }
+  .login-card p { color: var(--text-dim); font-size: 14px; margin-bottom: 24px; }
+  .login-card input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 9px; padding: 12px 14px; color: var(--text);
+    font-family: inherit; font-size: 15px; text-align: right; margin-bottom: 16px;
+  }
+  .login-card input:focus { outline: none; border-color: var(--accent); }
+  .login-card button {
+    width: 100%; background: var(--accent); color: #fff; border: none;
+    border-radius: 9px; padding: 12px; font-family: inherit; font-size: 15px;
+    font-weight: 600; cursor: pointer;
+  }
+  .login-err { color: var(--err); font-size: 13px; margin-top: 10px; min-height: 16px; }
+
+  /* Layout */
+  .app { display: none; height: 100vh; flex-direction: column; }
+  .app.active { display: flex; }
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 18px; border-bottom: 1px solid var(--border);
+    background: var(--surface); flex-shrink: 0;
+  }
+  .header .title { display: flex; align-items: center; gap: 10px; }
+  .header .title svg { width: 22px; height: 22px; color: var(--accent); }
+  .header .title h1 { font-size: 17px; font-weight: 600; }
+  .header .actions { display: flex; align-items: center; gap: 10px; }
+  .refresh-btn, .logout-btn {
+    background: var(--surface-2); border: 1px solid var(--border);
+    color: var(--text-dim); border-radius: 8px; padding: 7px 13px;
+    font-family: inherit; font-size: 13px; cursor: pointer;
+    display: flex; align-items: center; gap: 6px; transition: all .15s;
+  }
+  .refresh-btn:hover, .logout-btn:hover { color: var(--text); border-color: var(--accent); }
+  .refresh-btn svg { width: 14px; height: 14px; }
+  .auto-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+
+  .main { flex: 1; display: flex; overflow: hidden; }
+
+  /* List */
+  .list {
+    width: 340px; border-left: 1px solid var(--border);
+    overflow-y: auto; flex-shrink: 0; background: var(--surface);
+  }
+  .log-row {
+    padding: 11px 16px; border-bottom: 1px solid var(--border);
+    cursor: pointer; transition: background .12s;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .log-row:hover { background: var(--surface-2); }
+  .log-row.selected { background: var(--surface-2); border-right: 3px solid var(--accent); }
+  .log-row-top { display: flex; align-items: center; justify-content: space-between; }
+  .log-endpoint {
+    font-family: var(--mono); font-size: 13px; font-weight: 500;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .status-dot.ok { background: var(--ok); }
+  .status-dot.err { background: var(--err); }
+  .status-dot.read { background: var(--warn); }
+  .log-time { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+  .log-phone { font-size: 12px; color: var(--text-dim); direction: ltr; text-align: right; }
+
+  /* Detail */
+  .detail { flex: 1; overflow-y: auto; padding: 22px 26px; }
+  .detail-empty {
+    height: 100%; display: flex; align-items: center; justify-content: center;
+    color: var(--text-dim); font-size: 15px;
+  }
+  .detail h2 {
+    font-family: var(--mono); font-size: 16px; margin-bottom: 4px;
+    display: flex; align-items: center; gap: 9px;
+  }
+  .detail .ts { color: var(--text-dim); font-size: 13px; margin-bottom: 22px; }
+  .block { margin-bottom: 20px; }
+  .block-label {
+    font-size: 12px; text-transform: uppercase; letter-spacing: .5px;
+    color: var(--text-dim); margin-bottom: 8px; font-weight: 600;
+  }
+  .code {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 9px; padding: 14px 16px;
+    font-family: var(--mono); font-size: 13px; line-height: 1.7;
+    white-space: pre-wrap; word-break: break-all; direction: ltr; text-align: left;
+    color: #c8d4e0;
+  }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; }
+  .kv .k { color: var(--accent); font-family: var(--mono); font-size: 13px; direction: ltr; }
+  .kv .v { font-family: var(--mono); font-size: 13px; direction: ltr; word-break: break-all; }
+  .resp-ok { color: var(--ok); }
+  .resp-read { color: var(--warn); }
+  .loading { padding: 40px; text-align: center; color: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<div class="login-wrap" id="loginWrap">
+  <div class="login-card">
+    <h1>פאנל מעקב</h1>
+    <p>שערי רווחה — מפתח</p>
+    <input type="password" id="pw" placeholder="סיסמת מפתח" autocomplete="current-password">
+    <button id="loginBtn">כניסה</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<div class="app" id="app">
+  <div class="header">
+    <div class="title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+      </svg>
+      <h1>פאנל מעקב IVR</h1>
+    </div>
+    <div class="actions">
+      <button class="refresh-btn" id="autoBtn"><span class="auto-dot" id="autoDot"></span> רענון אוטומטי</button>
+      <button class="refresh-btn" id="refreshBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+        רענן
+      </button>
+      <button class="logout-btn" id="logoutBtn">יציאה</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="list" id="list"></div>
+    <div class="detail" id="detail">
+      <div class="detail-empty">בחר קריאה מהרשימה לצפייה בפרטים</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORE_KEY = 'sr_panel_token';
+  let token = localStorage.getItem(STORE_KEY) || null;
+  let logs = [];
+  let selectedId = null;
+  let autoRefresh = false;
+  let autoTimer = null;
+  const $ = id => document.getElementById(id);
+
+  async function doLogin() {
+    const pw = $('pw').value.trim();
+    if (!pw) return;
+    $('loginErr').textContent = '';
+    try {
+      const r = await fetch('/panel/login', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ password: pw })
+      });
+      if (!r.ok) { $('loginErr').textContent = 'סיסמה שגויה'; return; }
+      const d = await r.json();
+      token = d.token;
+      localStorage.setItem(STORE_KEY, token);
+      showApp();
+    } catch { $('loginErr').textContent = 'שגיאת חיבור'; }
+  }
+
+  function logout() {
+    localStorage.removeItem(STORE_KEY);
+    token = null; stopAuto();
+    $('app').classList.remove('active');
+    $('loginWrap').style.display = 'flex';
+  }
+
+  function showApp() {
+    $('loginWrap').style.display = 'none';
+    $('app').classList.add('active');
+    loadLogs();
+  }
+
+  function fmtTime(iso) {
+    const d = new Date(iso);
+    return d.toLocaleTimeString('he-IL', {hour:'2-digit',minute:'2-digit',second:'2-digit'}) +
+           ' ' + d.toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'});
+  }
+
+  function respType(resp) {
+    if (!resp) return 'err';
+    if (resp.startsWith('read=')) return 'read';
+    if (resp.startsWith('id_list_message=')) return 'ok';
+    return 'err';
+  }
+
+  function shortEndpoint(ep) { return ep.replace(/^\/ivr\//, ''); }
+
+  async function loadLogs() {
+    try {
+      const r = await fetch('/panel/logs?limit=150', { headers: {'x-auth': token} });
+      if (r.status === 401) { logout(); return; }
+      const d = await r.json();
+      logs = d.logs;
+      renderList();
+    } catch {
+      $('list').innerHTML = '<div class="loading">שגיאה בטעינה</div>';
+    }
+  }
+
+  function renderList() {
+    const l = $('list');
+    if (!logs.length) { l.innerHTML = '<div class="loading">אין קריאות עדיין</div>'; return; }
+    l.innerHTML = '';
+    logs.forEach(log => {
+      const row = document.createElement('div');
+      row.className = 'log-row' + (log.id === selectedId ? ' selected' : '');
+      const t = respType(log.response);
+      row.innerHTML = `
+        <div class="log-row-top">
+          <span class="log-endpoint"><span class="status-dot ${t}"></span>${shortEndpoint(log.endpoint)}</span>
+          <span class="log-time">${fmtTime(log.created_at)}</span>
+        </div>
+        <span class="log-phone">${log.phone || '—'}</span>
+      `;
+      row.addEventListener('click', () => selectLog(log.id));
+      l.appendChild(row);
+    });
+  }
+
+  function selectLog(id) {
+    selectedId = id;
+    renderList();
+    const log = logs.find(x => x.id === id);
+    if (!log) return;
+    const t = respType(log.response);
+    const q = log.query || {};
+    const kvHtml = Object.keys(q).length
+      ? Object.entries(q).map(([k,v]) => `<span class="k">${k}</span><span class="v">${v}</span>`).join('')
+      : '<span class="v" style="color:var(--text-dim)">אין פרמטרים</span>';
+
+    $('detail').innerHTML = `
+      <h2><span class="status-dot ${t}"></span>${shortEndpoint(log.endpoint)}</h2>
+      <div class="ts">${fmtTime(log.created_at)} · ${log.phone || 'ללא טלפון'}</div>
+      <div class="block">
+        <div class="block-label">בקשה נכנסת (Query)</div>
+        <div class="code"><div class="kv">${kvHtml}</div></div>
+      </div>
+      <div class="block">
+        <div class="block-label">תגובת שרת (Response)</div>
+        <div class="code resp-${t}">${log.response || '(ריק)'}</div>
+      </div>
+    `;
+  }
+
+  function toggleAuto() {
+    autoRefresh = !autoRefresh;
+    $('autoDot').style.background = autoRefresh ? 'var(--ok)' : 'var(--text-dim)';
+    if (autoRefresh) { autoTimer = setInterval(loadLogs, 3000); }
+    else stopAuto();
+  }
+  function stopAuto() {
+    autoRefresh = false;
+    $('autoDot').style.background = 'var(--text-dim)';
+    if (autoTimer) clearInterval(autoTimer);
+  }
+
+  $('loginBtn').addEventListener('click', doLogin);
+  $('pw').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  $('logoutBtn').addEventListener('click', logout);
+  $('refreshBtn').addEventListener('click', loadLogs);
+  $('autoBtn').addEventListener('click', toggleAuto);
+
+  stopAuto();
+  if (token) showApp();
+</script>
+</body>
+</html>
