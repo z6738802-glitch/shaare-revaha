@@ -22,6 +22,10 @@ app.use('/ivr', logMiddleware, ivrRouter);
 app.use('/admin', adminRouter);
 app.use('/panel', panelRouter);
 
+// זמני — בדיקת DB
+const debugRouter = require('./debug');
+app.use('/debug', debugRouter);
+
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 const PORT = process.env.PORT || 3000;
