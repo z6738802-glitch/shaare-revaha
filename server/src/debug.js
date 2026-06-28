@@ -50,4 +50,14 @@ router.get('/debug-cancel', async (req, res) => {
   }
 });
 
+// בדיקת מה todayIL מחזיר על השרת
+router.get('/debug-today', async (req, res) => {
+  const { todayIL } = require('./time');
+  res.json({
+    todayIL_no_args: todayIL(),
+    raw_date: new Date().toISOString(),
+    locale_il: new Date().toLocaleString('en-CA', { timeZone: 'Asia/Jerusalem' }),
+  });
+});
+
 module.exports = router;
