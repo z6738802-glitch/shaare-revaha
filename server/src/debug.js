@@ -28,4 +28,26 @@ router.get('/debug-bookings', async (req, res) => {
   }
 });
 
+// בדיקת חיפוש ביטול — מראה מה ה-date המאוחסן מול מה שמחפשים
+router.get('/debug-cancel', async (req, res) => {
+  const { phone, code } = req.query;
+  try {
+    const found = await pool.query(
+      `SELECT id, date::text AS stored_date, phone, booking_code, status
+       FROM shaare_revaha.bookings
+       WHERE phone = $1 AND booking_code = $2`,
+      [phone, code]
+    );
+    const today = await pool.query(`SELECT CURRENT_DATE::text AS server_date`);
+    res.json({
+      server_current_date: today.rows[0].server_date,
+      search_phone: phone,
+      search_code: code,
+      all_matches_ignoring_date: found.rows,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
