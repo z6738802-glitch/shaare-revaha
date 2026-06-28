@@ -293,6 +293,7 @@
     return '';
   }
 
+  function toggleAuto() {
     autoRefresh = !autoRefresh;
     $('autoDot').style.background = autoRefresh ? 'var(--ok)' : 'var(--text-dim)';
     if (autoRefresh) autoTimer = setInterval(loadSessions, 3000); else stopAuto();
