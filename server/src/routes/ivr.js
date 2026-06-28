@@ -193,13 +193,14 @@ router.get('/book', async (req, res) => {
 // ────────────────────────────────────────────────
 // ביטול שלב 1: קיבלנו קוד ביטול
 // ימות שולחת: ApiPhone, CANCEL_CODE (4 ספרות)
-// ────────────────────────────────────────────────
-// ────────────────────────────────────────────────
-// ביטול שלב 1: קיבלנו קוד — אמת שקיים ושאל אישור
-// ימות שולחת: ApiPhone, CANCEL_CODE (4 ספרות)
-// ────────────────────────────────────────────────
-router.get('/cancel-find', async (req, res) => {
-  const { ApiPhone, CANCEL_CODE, ApiTime } = req.query;
+// ════════════════════════════════════════════════
+// /cancel — endpoint מאוחד לביטול (דו-שלבי)
+// ב-ימות ה-read חוזר לאותו api_link, אז:
+//   1. רק CANCEL_CODE          → אמת קוד → שאל אישור (32/012)
+//   2. + CONFIRM (1=מחק/2=לא)  → בצע ביטול או חזרה
+// ════════════════════════════════════════════════
+router.get('/cancel', async (req, res) => {
+  const { ApiPhone, CANCEL_CODE, CONFIRM, ApiTime } = req.query;
 
   if (!ApiPhone || !CANCEL_CODE) {
     return res.send('id_list_message=f-/32/006');
@@ -208,7 +209,43 @@ router.get('/cancel-find', async (req, res) => {
   const code = String(CANCEL_CODE).padStart(4, '0');
   const date = todayIL(ApiTime);
 
-  // חיפוש ההזמנה
+  // ── שלב 2: יש אישור ──
+  if (CONFIRM) {
+    // בחר 2 (ביטול וחזרה) — לא מוחקים
+    if (CONFIRM !== '1') {
+      return res.send('id_list_message=f-/32/004');
+    }
+
+    const find = await pool.query(
+      `SELECT id, ride_id
+       FROM shaare_revaha.bookings
+       WHERE phone = $1 AND date = $2 AND status = 'active' AND booking_code = $3`,
+      [ApiPhone, date, code]
+    );
+
+    if (find.rows.length === 0) {
+      return res.send('id_list_message=f-/32/011');
+    }
+
+    const booking = find.rows[0];
+    const ride = RIDES.find(r => r.id === booking.ride_id);
+
+    if (process.env.TEST_MODE !== 'on' && !canCancel(ride.departure_time, ApiTime)) {
+      return res.send('id_list_message=f-/32/007');
+    }
+
+    await pool.query(
+      `UPDATE shaare_revaha.bookings
+       SET status = 'cancelled', cancelled_at = NOW()
+       WHERE id = $1`,
+      [booking.id]
+    );
+
+    // 32/013 = "ההזמנה נמחקה בהצלחה"
+    return res.send('id_list_message=f-/32/013');
+  }
+
+  // ── שלב 1: רק קוד — אמת ושאל אישור ──
   const find = await pool.query(
     `SELECT ride_id
      FROM shaare_revaha.bookings
@@ -217,70 +254,19 @@ router.get('/cancel-find', async (req, res) => {
   );
 
   if (find.rows.length === 0) {
-    // לא נמצאה הזמנה — 32/011 "לא נמצאו נסיעות"
+    // 32/011 = "לא נמצאו נסיעות"
     return res.send('id_list_message=f-/32/011');
   }
 
   const ride = RIDES.find(r => r.id === find.rows[0].ride_id);
 
-  // בדיקת חלון ביטול
   if (process.env.TEST_MODE !== 'on' && !canCancel(ride.departure_time, ApiTime)) {
-    // מאוחר מדי — 32/007
+    // 32/007 = "ההזמנה נסגרה לשעה זו"
     return res.send('id_list_message=f-/32/007');
   }
 
-  // נמצאה ותקינה — שאל אישור (32/012 "למחיקה הקישו 1 לביטול וחזרה הקישו 2")
+  // 32/012 = "למחיקה הקישו 1 לביטול וחזרה הקישו 2"
   return res.send('read=f-/32/012=CONFIRM,,1,1,1,Number,yes,yes,,,,Ok,,,,no,');
-});
-
-// ────────────────────────────────────────────────
-// ביטול שלב 2: קיבלנו אישור — בצע מחיקה
-// ימות שולחת: ApiPhone, CANCEL_CODE, CONFIRM (1=מחק, 2=ביטול)
-// ────────────────────────────────────────────────
-router.get('/cancel', async (req, res) => {
-  const { ApiPhone, CANCEL_CODE, CONFIRM, ApiTime } = req.query;
-
-  if (!ApiPhone || !CANCEL_CODE || !CONFIRM) {
-    return res.send('id_list_message=f-/32/006');
-  }
-
-  // אם בחר 2 (ביטול וחזרה) — לא מוחקים, רק שלום
-  if (CONFIRM !== '1') {
-    return res.send('id_list_message=f-/32/004');
-  }
-
-  const code = String(CANCEL_CODE).padStart(4, '0');
-  const date = todayIL(ApiTime);
-
-  // חיפוש ההזמנה שוב (כולל בדיקת חלון מחדש)
-  const find = await pool.query(
-    `SELECT id, ride_id
-     FROM shaare_revaha.bookings
-     WHERE phone = $1 AND date = $2 AND status = 'active' AND booking_code = $3`,
-    [ApiPhone, date, code]
-  );
-
-  if (find.rows.length === 0) {
-    return res.send('id_list_message=f-/32/011');
-  }
-
-  const booking = find.rows[0];
-  const ride = RIDES.find(r => r.id === booking.ride_id);
-
-  if (process.env.TEST_MODE !== 'on' && !canCancel(ride.departure_time, ApiTime)) {
-    return res.send('id_list_message=f-/32/007');
-  }
-
-  // ביצוע הביטול
-  await pool.query(
-    `UPDATE shaare_revaha.bookings
-     SET status = 'cancelled', cancelled_at = NOW()
-     WHERE id = $1`,
-    [booking.id]
-  );
-
-  // 32/013 = "ההזמנה נמחקה בהצלחה"
-  return res.send('id_list_message=f-/32/013');
 });
 
 module.exports = router;
