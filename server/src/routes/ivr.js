@@ -69,14 +69,23 @@ async function seatsForPhone(phone, rideId, date) {
 //   3. + ASTATION / BSTATION       → שמור הזמנה
 // ════════════════════════════════════════════════
 router.get('/book', async (req, res) => {
-  const { ApiPhone, RIDE, SEATS, NEIGHBORHOOD, ASTATION, BSTATION, ApiTime } = req.query;
+  const { ApiPhone, RIDE, SEATS, DIRECTION, NEIGHBORHOOD, ASTATION, BSTATION, ApiTime } = req.query;
 
   // ── ולידציה בסיסית ──
   if (!ApiPhone || !RIDE || !SEATS) {
     return res.send('id_list_message=f-/32/006');
   }
 
-  const rideId = parseInt(RIDE);
+  // ── המרת RIDE לפי כיוון ──
+  // אם הגיע DIRECTION=hadassah, RIDE 1-4 ממופה ל-5-8
+  // אחרת (beitar או ללא DIRECTION) נשאר 1-4
+  let rideId = parseInt(RIDE);
+  let direction = 'beitar_hadassah';
+  if (DIRECTION === 'hadassah') {
+    direction = 'hadassah_beitar';
+    rideId = rideId + 4; // 1→5, 2→6, 3→7, 4→8
+  }
+
   const seats = parseInt(SEATS);
   const date = todayIL(ApiTime);
 
@@ -85,22 +94,20 @@ router.get('/book', async (req, res) => {
     return res.send('id_list_message=f-/32/006');
   }
 
-  // ════════════════════════════════════════════
-  // שלב 3: כבר יש תחנה → שמור הזמנה
-  // ════════════════════════════════════════════
-  if (ASTATION || BSTATION) {
-    const neighborhood = ASTATION ? 'A' : 'B';
-    const station = parseInt(ASTATION || BSTATION);
+  const isHadassah = ride.direction === 'hadassah_beitar';
 
-    if (station < 1 || station > 12) {
-      return res.send('id_list_message=f-/32/006');
-    }
+  // ════════════════════════════════════════════
+  // שמירת הזמנה — מתי?
+  //   ביתר→הדסה: כשיש תחנה (ASTATION/BSTATION)
+  //   הדסה→ביתר: מיד אחרי בדיקת זמינות (אין תחנה)
+  // ════════════════════════════════════════════
+  const hasStation = ASTATION || BSTATION;
 
+  async function saveBooking(neighborhood, station) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
 
-      // נעילת מרוץ לפי יום+נסיעה
       const dateKey = parseInt(date.slice(8, 10) + date.slice(5, 7) + date.slice(2, 4));
       const lockKey = rideId * 1000000 + dateKey;
       await client.query(`SELECT pg_advisory_xact_lock($1)`, [lockKey]);
@@ -115,7 +122,7 @@ router.get('/book', async (req, res) => {
 
       if (TOTAL_SEATS - taken < seats) {
         await client.query('ROLLBACK');
-        return res.send('id_list_message=f-/32/000');
+        return 'id_list_message=f-/32/000';
       }
 
       const bookingCode = await generateBookingCode(client, date);
@@ -128,47 +135,47 @@ router.get('/book', async (req, res) => {
       );
 
       await client.query('COMMIT');
-
-      // 32/005 = "הזמנה נקלטה בהצלחה מספר הזמנה הוא" + הקראת הקוד
-      return res.send(`id_list_message=f-/32/005.n-${bookingCode}`);
-
+      return `id_list_message=f-/32/005.n-${bookingCode}`;
     } catch (err) {
       await client.query('ROLLBACK');
       console.error('booking error:', err.message);
-      return res.send('id_list_message=f-/32/006');
+      return 'id_list_message=f-/32/006';
     } finally {
       client.release();
     }
   }
 
-  // ════════════════════════════════════════════
-  // שלב 2: יש גבעה → שאל תחנה
-  // ════════════════════════════════════════════
-  if (NEIGHBORHOOD) {
+  // ── ביתר→הדסה: יש תחנה → שמור ──
+  if (hasStation) {
+    const neighborhood = ASTATION ? 'A' : 'B';
+    const station = parseInt(ASTATION || BSTATION);
+    if (station < 1 || station > 12) {
+      return res.send('id_list_message=f-/32/006');
+    }
+    return res.send(await saveBooking(neighborhood, station));
+  }
+
+  // ── ביתר→הדסה: יש גבעה → שאל תחנה ──
+  if (NEIGHBORHOOD && !isHadassah) {
     if (NEIGHBORHOOD === '1') {
-      // הקשה 1 = גבעה B — קובץ 32/015, תחנה מתיקיית BSTATION
       return res.send('read=f-/32/015=BSTATION,,2,1,2,File,yes,yes,,,,Ok,,,,no,');
     } else {
-      // הקשה 2 = גבעה A — קובץ 32/014, תחנה מתיקיית ASTATION
       return res.send('read=f-/32/014=ASTATION,,2,1,2,File,yes,yes,,,,Ok,,,,no,');
     }
   }
 
   // ════════════════════════════════════════════
-  // שלב 1: רק RIDE + SEATS → בדוק זמינות, שאל גבעה
+  // שלב 1: רק RIDE + SEATS → בדוק זמינות
   // ════════════════════════════════════════════
 
-  // בדיקת חלון הזמן (מדלגים במצב טסט)
-  const window = ride.direction === 'beitar_hadassah'
-    ? BOOKING_WINDOW_BEITAR
-    : BOOKING_WINDOW_HADASSAH;
+  // בדיקת חלון הזמן
+  const window = isHadassah ? BOOKING_WINDOW_HADASSAH : BOOKING_WINDOW_BEITAR;
 
   if (process.env.TEST_MODE !== 'on' && !canBook(ride.departure_time, window, ApiTime)) {
-    // 32/008 = "ניתן להזמין מביתר שעה וחצי ומהדסה שעה"
     return res.send('id_list_message=f-/32/008');
   }
 
-  // זמינות בנסיעה ומגבלת טלפון
+  // זמינות + מגבלת טלפון
   const taken = await takenSeats(rideId, date);
   const rideAvailable = TOTAL_SEATS - taken;
   const phoneBooked = await seatsForPhone(ApiPhone, rideId, date);
@@ -176,17 +183,20 @@ router.get('/book', async (req, res) => {
   const available = Math.min(rideAvailable, phoneRemaining);
 
   if (available <= 0) {
-    // 32/000 = "הנסיעה מלאה"
     return res.send('id_list_message=f-/32/000');
   }
 
   if (available < seats) {
-    // נשאר פחות — בקש כמות קטנה יותר (32/001 / 32/002)
     const file = available === 1 ? '32/001' : '32/002';
     return res.send(`read=f-/${file}=SEATS,,,,1,Number,yes,yes,,,,,,,,`);
   }
 
-  // הכל תקין — שאל גבעה (32/016), File mode
+  // ── הדסה→ביתר: אין גבעה/תחנה → שמור מיד ──
+  if (isHadassah) {
+    return res.send(await saveBooking(null, null));
+  }
+
+  // ── ביתר→הדסה: שאל גבעה ──
   return res.send('read=f-/32/016=NEIGHBORHOOD,,1,1,1,File,yes,yes,,,,Ok,,,,no,');
 });
 

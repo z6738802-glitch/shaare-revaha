@@ -60,4 +60,15 @@ router.get('/debug-today', async (req, res) => {
   });
 });
 
+// שינוי DB — אפשר NULL ב-neighborhood/station (לנסיעות הדסה→ביתר)
+router.get('/allow-null-station', async (req, res) => {
+  try {
+    await pool.query(`ALTER TABLE shaare_revaha.bookings ALTER COLUMN neighborhood DROP NOT NULL`);
+    await pool.query(`ALTER TABLE shaare_revaha.bookings ALTER COLUMN station DROP NOT NULL`);
+    res.json({ success: true, message: 'neighborhood/station now nullable' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;

@@ -35,6 +35,8 @@ function rideLabel(rideId) {
 
 // עזר: שם תחנה לפי גבעה ומספר
 function stationName(neighborhood, stationId) {
+  // נסיעות הדסה→ביתר — אין גבעה/תחנה
+  if (!neighborhood || !stationId) return 'איסוף מהדסה';
   const list = neighborhood === 'A' ? STATIONS_A : STATIONS_B;
   const s = list.find(s => s.id === stationId);
   return s ? s.name : `תחנה ${stationId}`;
