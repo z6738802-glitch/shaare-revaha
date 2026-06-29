@@ -266,7 +266,8 @@ router.get('/cancel', async (req, res) => {
   }
 
   // 32/012 = "למחיקה הקישו 1 לביטול וחזרה הקישו 2"
-  return res.send('read=f-/32/012=CONFIRM,,1,1,1,Number,yes,yes,,,,Ok,,,,no,');
+  // ערך 6 = No (לא משמיע את ההקשה), ערך 15 = no (לא מבקש אישור)
+  return res.send('read=f-/32/012=CONFIRM,,1,1,1,No,yes,yes,,,,no,,,,no,');
 });
 
 module.exports = router;
