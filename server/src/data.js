@@ -46,8 +46,8 @@ const STATIONS_B = [
 
 const TOTAL_SEATS = 16;
 // חלון הזמנה לפני נסיעה (בדקות)
-const BOOKING_WINDOW_BEITAR = 90;
-const BOOKING_WINDOW_HADASSAH = 60;
+const BOOKING_WINDOW_BEITAR = 15;
+const BOOKING_WINDOW_HADASSAH = 15;
 // חלון ביטול לפני נסיעה (בדקות)
 const CANCEL_WINDOW = 5;
 // מקסימום מושבים לטלפון לנסיעה
