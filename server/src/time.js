@@ -33,12 +33,14 @@ function timeToMinutes(hhmm) {
 }
 
 // בדיקה האם ניתן להזמין נסיעה (לפי חלון זמן)
-function canBook(departureTime, closeMinutes, apiTime) {
+// בדיקה האם ניתן להזמין נסיעה
+// החלון: נפתח openMinutes דקות לפני, נסגר closeMinutes דקות לפני
+function canBook(departureTime, openMinutes, closeMinutes, apiTime) {
   const now = timeToMinutes(nowTimeIL(apiTime));
   const dep = timeToMinutes(departureTime);
   const diff = dep - now;
-  // ניתן להזמין מכל זמן מראש, ועד closeMinutes דקות לפני הנסיעה
-  return diff >= closeMinutes;
+  // בתוך החלון: לא מוקדם מ-open, לא מאוחר מ-close
+  return diff <= openMinutes && diff >= closeMinutes;
 }
 
 // בדיקה האם ניתן לבטל (לפחות 5 דקות לפני הנסיעה)

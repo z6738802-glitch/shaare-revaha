@@ -8,8 +8,9 @@ const {
   STATIONS_A,
   STATIONS_B,
   TOTAL_SEATS,
-  BOOKING_WINDOW_BEITAR,
-  BOOKING_WINDOW_HADASSAH,
+  BOOKING_OPEN_BEITAR,
+  BOOKING_OPEN_HADASSAH,
+  BOOKING_CLOSE,
   MAX_SEATS_PER_PHONE,
   CANCEL_WINDOW,
 } = require('../data');
@@ -169,9 +170,9 @@ router.get('/book', async (req, res) => {
   // ════════════════════════════════════════════
 
   // בדיקת חלון הזמן
-  const window = isHadassah ? BOOKING_WINDOW_HADASSAH : BOOKING_WINDOW_BEITAR;
+  const openWindow = isHadassah ? BOOKING_OPEN_HADASSAH : BOOKING_OPEN_BEITAR;
 
-  if (process.env.TEST_MODE !== 'on' && !canBook(ride.departure_time, window, ApiTime)) {
+  if (process.env.TEST_MODE !== 'on' && !canBook(ride.departure_time, openWindow, BOOKING_CLOSE, ApiTime)) {
     return res.send('id_list_message=f-/32/008');
   }
 

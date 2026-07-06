@@ -45,9 +45,11 @@ const STATIONS_B = [
 ];
 
 const TOTAL_SEATS = 16;
-// חלון הזמנה לפני נסיעה (בדקות)
-const BOOKING_WINDOW_BEITAR = 15;
-const BOOKING_WINDOW_HADASSAH = 15;
+// חלון הזמנה (בדקות לפני הנסיעה)
+// נפתח ב-OPEN דקות לפני, נסגר ב-CLOSE דקות לפני
+const BOOKING_OPEN_BEITAR = 90;    // ביתר: נפתח 90 דק' לפני
+const BOOKING_OPEN_HADASSAH = 60;  // הדסה: נפתח 60 דק' לפני
+const BOOKING_CLOSE = 15;          // שני הכיוונים: נסגר 15 דק' לפני
 // חלון ביטול לפני נסיעה (בדקות)
 const CANCEL_WINDOW = 5;
 // מקסימום מושבים לטלפון לנסיעה
@@ -58,8 +60,9 @@ module.exports = {
   STATIONS_A,
   STATIONS_B,
   TOTAL_SEATS,
-  BOOKING_WINDOW_BEITAR,
-  BOOKING_WINDOW_HADASSAH,
+  BOOKING_OPEN_BEITAR,
+  BOOKING_OPEN_HADASSAH,
+  BOOKING_CLOSE,
   CANCEL_WINDOW,
   MAX_SEATS_PER_PHONE,
 };
