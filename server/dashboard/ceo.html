@@ -316,6 +316,13 @@
 
   function showApp() { $('loginWrap').style.display='none'; $('app').classList.add('active'); setRange('week'); loadData(); }
 
+  // מחזיר את התאריכים בסדר נכון (מוקדם, מאוחר) בלי קשר לשדה
+  function getRange() {
+    let a = $('fromDate').value, b = $('toDate').value;
+    if (a && b && a > b) { const tmp = a; a = b; b = tmp; }
+    return { from: a, to: b };
+  }
+
   // ===== Data =====
   async function loadData() {
     if (currentView === 'overview') await loadStats();
@@ -323,7 +330,7 @@
   }
 
   async function loadStats() {
-    const from = $('fromDate').value, to = $('toDate').value;
+    const { from, to } = getRange();
     $('statsGrid').innerHTML = '<div class="state" style="grid-column:1/-1"><div class="spinner"></div></div>';
     try {
       const r = await fetch(`/admin/ceo-stats?from=${from}&to=${to}`, { headers: {'x-auth': token} });
@@ -383,7 +390,7 @@
   }
 
   async function loadBookings() {
-    const from = $('fromDate').value, to = $('toDate').value;
+    const { from, to } = getRange();
     $('bookingsBody').innerHTML = '<tr><td colspan="8"><div class="state"><div class="spinner"></div></div></td></tr>';
     try {
       const url = `/admin/ceo-bookings?from=${from}&to=${to}${currentStatus ? '&status='+currentStatus : ''}`;
