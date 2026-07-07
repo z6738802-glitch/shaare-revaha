@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>שערי רווחה — ממשק ניהול</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f6f8; --card: #fff; --ink: #1a2b3c; --ink-soft: #5e7186; --ink-faint: #9aabbb;
+    --line: #e4eaef; --line-soft: #eef2f5;
+    --brand: #1f8a6d; --brand-bg: #e6f5f0; --brand-2: #2aa885;
+    --beitar: #1f8a6d; --hadassah: #d98324;
+    --danger: #d65745; --danger-bg: #fdeceb;
+    --shadow: 0 1px 3px rgba(26,43,60,.06), 0 8px 24px rgba(26,43,60,.05);
+    --shadow-lg: 0 4px 12px rgba(26,43,60,.08), 0 16px 48px rgba(26,43,60,.08);
+    --radius: 18px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { direction: rtl; text-align: right; font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; -webkit-font-smoothing: antialiased; line-height: 1.5; }
+
+  /* Login */
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .login-card { background: var(--card); border-radius: 24px; padding: 44px 36px; width: 100%; max-width: 400px; text-align: center; box-shadow: var(--shadow-lg); border: 1px solid var(--line); }
+  .login-logo { width: 72px; height: 72px; margin: 0 auto 22px; border-radius: 20px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(31,138,109,.25); }
+  .login-logo svg { width: 36px; height: 36px; color: #fff; }
+  .login-card h1 { font-size: 26px; font-weight: 800; letter-spacing: -.5px; margin-bottom: 6px; }
+  .login-card .sub { color: var(--ink-soft); font-size: 15px; margin-bottom: 30px; font-weight: 500; }
+  .field { margin-bottom: 18px; }
+  .field input { width: 100%; background: var(--bg); border: 2px solid var(--line); border-radius: 14px; padding: 15px 18px; color: var(--ink); font-family: inherit; font-size: 16px; text-align: right; transition: all .18s; font-weight: 500; }
+  .field input:focus { outline: none; border-color: var(--brand); background: #fff; }
+  .btn-primary { width: 100%; background: var(--brand); color: #fff; border: none; border-radius: 14px; padding: 16px; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer; transition: all .18s; box-shadow: 0 4px 14px rgba(31,138,109,.28); }
+  .btn-primary:hover { background: #1a7a60; transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: .6; cursor: default; transform: none; }
+  .login-error { color: var(--danger); font-size: 14px; margin-top: 16px; min-height: 18px; font-weight: 600; }
+
+  /* App */
+  .app { display: none; max-width: 1080px; margin: 0 auto; padding: 0 16px 80px; }
+  .app.active { display: block; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 22px 4px 18px; flex-wrap: wrap; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-mark { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(31,138,109,.22); }
+  .brand-mark svg { width: 24px; height: 24px; color: #fff; }
+  .brand h1 { font-size: 21px; font-weight: 800; letter-spacing: -.4px; }
+  .brand .tag { font-size: 12.5px; color: var(--ink-faint); font-weight: 600; margin-top: -2px; }
+  .top-actions { display: flex; align-items: center; gap: 9px; }
+  .btn-ghost { background: var(--card); border: 1.5px solid var(--line); color: var(--ink-soft); border-radius: 11px; padding: 9px 15px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 7px; text-decoration: none; }
+  .btn-ghost:hover { border-color: var(--brand); color: var(--brand); }
+  .btn-ghost svg { width: 15px; height: 15px; }
+  .btn-ghost.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; background: var(--card); padding: 5px; border-radius: 14px; margin-bottom: 20px; border: 1px solid var(--line); width: fit-content; box-shadow: var(--shadow); }
+  .tab { padding: 10px 22px; border-radius: 10px; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; border: none; background: none; color: var(--ink-soft); transition: all .15s; }
+  .tab.active { background: var(--brand); color: #fff; }
+
+  /* Date filter */
+  .filters { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; flex-wrap: wrap; }
+  .quick-dates { display: flex; gap: 6px; background: var(--card); padding: 4px; border-radius: 11px; border: 1px solid var(--line); }
+  .quick-btn { padding: 8px 15px; border-radius: 8px; border: none; background: none; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--ink-soft); cursor: pointer; transition: all .15s; }
+  .quick-btn.active { background: var(--brand-bg); color: var(--brand); }
+  .date-range { display: flex; align-items: center; gap: 8px; }
+  .date-range input { border: 1.5px solid var(--line); border-radius: 10px; padding: 9px 12px; font-family: inherit; font-size: 14px; color: var(--ink); background: var(--card); }
+  .date-range input:focus { outline: none; border-color: var(--brand); }
+  .date-range span { color: var(--ink-faint); font-size: 14px; }
+
+  /* Stats */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 26px; }
+  .stat-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); }
+  .stat-card .icon { width: 40px; height: 40px; border-radius: 11px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+  .stat-card .icon svg { width: 21px; height: 21px; }
+  .stat-card .icon.green { background: var(--brand-bg); color: var(--brand); }
+  .stat-card .icon.orange { background: #fdf1e3; color: var(--hadassah); }
+  .stat-card .icon.blue { background: #e8f0fc; color: #3b7dd8; }
+  .stat-card .icon.red { background: var(--danger-bg); color: var(--danger); }
+  .stat-card .num { font-size: 32px; font-weight: 800; letter-spacing: -1px; font-variant-numeric: tabular-nums; line-height: 1; }
+  .stat-card .lbl { font-size: 13.5px; color: var(--ink-soft); font-weight: 600; margin-top: 5px; }
+
+  /* Charts */
+  .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 26px; }
+  .chart-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); }
+  .chart-title { font-size: 15.5px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+  .chart-title svg { width: 17px; height: 17px; color: var(--brand); }
+  .bars { display: flex; flex-direction: column; gap: 12px; }
+  .bar-row { display: grid; grid-template-columns: 90px 1fr 44px; align-items: center; gap: 12px; }
+  .bar-label { font-size: 13.5px; font-weight: 600; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .bar-track { height: 26px; background: var(--line-soft); border-radius: 8px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 8px; transition: width .5s ease; min-width: 2px; }
+  .bar-fill.beitar { background: linear-gradient(90deg, var(--beitar), var(--brand-2)); }
+  .bar-fill.hadassah { background: linear-gradient(90deg, var(--hadassah), #e5a04d); }
+  .bar-val { font-size: 14px; font-weight: 700; text-align: left; font-variant-numeric: tabular-nums; }
+
+  .split { display: flex; height: 200px; align-items: flex-end; gap: 8px; padding-top: 10px; }
+  .split-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end; }
+  .split-bar { width: 100%; max-width: 46px; border-radius: 8px 8px 0 0; transition: height .5s ease; min-height: 3px; }
+  .split-bar.beitar { background: linear-gradient(180deg, var(--brand-2), var(--beitar)); }
+  .split-bar.hadassah { background: linear-gradient(180deg, #e5a04d, var(--hadassah)); }
+  .split-day { font-size: 11px; color: var(--ink-faint); font-weight: 600; }
+  .split-num { font-size: 12px; font-weight: 700; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+  .donut-wrap { display: flex; align-items: center; justify-content: center; gap: 30px; padding: 10px 0; }
+  .donut-legend { display: flex; flex-direction: column; gap: 14px; }
+  .legend-item { display: flex; align-items: center; gap: 10px; }
+  .legend-dot { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; }
+  .legend-dot.beitar { background: var(--beitar); }
+  .legend-dot.hadassah { background: var(--hadassah); }
+  .legend-text { font-size: 14px; }
+  .legend-text .v { font-weight: 800; font-size: 19px; font-variant-numeric: tabular-nums; }
+  .legend-text .l { color: var(--ink-soft); font-size: 13px; font-weight: 600; }
+
+  /* Table */
+  .table-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+  .table-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid var(--line); flex-wrap: wrap; gap: 12px; }
+  .table-head h3 { font-size: 16px; font-weight: 700; }
+  .table-head .count { color: var(--ink-soft); font-size: 14px; font-weight: 600; }
+  .status-filter { display: flex; gap: 5px; background: var(--bg); padding: 4px; border-radius: 10px; }
+  .sf-btn { padding: 6px 14px; border-radius: 7px; border: none; background: none; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--ink-soft); cursor: pointer; }
+  .sf-btn.active { background: #fff; color: var(--brand); box-shadow: var(--shadow); }
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead th { text-align: right; padding: 13px 16px; font-size: 12.5px; font-weight: 700; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .4px; border-bottom: 1px solid var(--line); white-space: nowrap; background: var(--bg); }
+  tbody td { padding: 13px 16px; border-bottom: 1px solid var(--line-soft); white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--bg); }
+  .cell-time { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .cell-phone { direction: ltr; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+  .cell-code { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--ink-soft); }
+  .dir-tag { display: inline-flex; padding: 3px 9px; border-radius: 7px; font-size: 12px; font-weight: 700; }
+  .dir-tag.beitar { background: var(--brand-bg); color: var(--brand); }
+  .dir-tag.hadassah { background: #fdf1e3; color: var(--hadassah); }
+  .status-tag { display: inline-flex; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+  .status-tag.active { background: var(--brand-bg); color: var(--brand); }
+  .status-tag.cancelled { background: var(--danger-bg); color: var(--danger); }
+  .seats-tag { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  .state { text-align: center; padding: 60px 20px; color: var(--ink-soft); }
+  .state svg { width: 44px; height: 44px; color: var(--ink-faint); margin-bottom: 14px; }
+  .state .title { font-size: 17px; font-weight: 700; color: var(--ink); margin-bottom: 5px; }
+  .spinner { width: 32px; height: 32px; border: 3px solid var(--line); border-top-color: var(--brand); border-radius: 50%; margin: 0 auto 16px; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* Footer */
+  .footer { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 44px; padding-top: 26px; border-top: 1px solid var(--line); color: var(--ink-faint); font-size: 13.5px; font-weight: 500; }
+  .footer-brand { display: inline-flex; align-items: center; gap: 6px; color: var(--brand); font-weight: 700; text-decoration: none; }
+  .footer-brand:hover { opacity: .75; }
+  .footer-brand svg { width: 15px; height: 15px; }
+
+  @media (max-width: 800px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .chart-row { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 500px) {
+    .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat-card { padding: 16px; }
+    .stat-card .num { font-size: 26px; }
+    .brand h1 { font-size: 18px; }
+    .quick-dates { width: 100%; justify-content: space-between; }
+    .date-range { width: 100%; }
+    .date-range input { flex: 1; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+    </div>
+    <h1>ממשק ניהול</h1>
+    <div class="sub">שערי רווחה</div>
+    <div class="field"><input type="password" id="pw" placeholder="סיסמת מנהל" autocomplete="current-password"></div>
+    <button class="btn-primary" id="loginBtn">כניסה</button>
+    <div class="login-error" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- App -->
+<div class="app" id="app">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.6 6.8 19.9 6 19 6H5c-.9 0-1.6.8-1.8 1.6l-1.4 5c-.1.4-.2.8-.2 1.2 0 .4.1.8.2 1.2C2.5 16.3 3 18 3 18h3"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+      </div>
+      <div><h1>שערי רווחה</h1><div class="tag">ממשק ניהול</div></div>
+    </div>
+    <div class="top-actions">
+      <a href="/" class="btn-ghost">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        ממשק נהג
+      </a>
+      <button class="btn-ghost danger" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+        יציאה
+      </button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-view="overview">סקירה</button>
+    <button class="tab" data-view="bookings">הזמנות</button>
+  </div>
+
+  <div class="filters">
+    <div class="quick-dates">
+      <button class="quick-btn" data-range="today">היום</button>
+      <button class="quick-btn active" data-range="week">שבוע</button>
+      <button class="quick-btn" data-range="month">חודש</button>
+    </div>
+    <div class="date-range">
+      <input type="date" id="fromDate">
+      <span>עד</span>
+      <input type="date" id="toDate">
+    </div>
+  </div>
+
+  <!-- Overview -->
+  <div class="view active" id="view-overview">
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="chart-row">
+      <div class="chart-card">
+        <div class="chart-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="8"/><rect x="12" y="6" width="3" height="12"/><rect x="17" y="13" width="3" height="5"/></svg>
+          נסיעות פופולריות
+        </div>
+        <div class="bars" id="rideBars"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20"/></svg>
+          פילוח לפי כיוון
+        </div>
+        <div class="donut-wrap" id="directionChart"></div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        מקומות לפי יום
+      </div>
+      <div class="split" id="dailyChart"></div>
+    </div>
+  </div>
+
+  <!-- Bookings -->
+  <div class="view" id="view-bookings">
+    <div class="table-card">
+      <div class="table-head">
+        <div><h3>הזמנות</h3> <span class="count" id="bookingsCount"></span></div>
+        <div class="status-filter">
+          <button class="sf-btn active" data-status="">הכל</button>
+          <button class="sf-btn" data-status="active">פעילות</button>
+          <button class="sf-btn" data-status="cancelled">מבוטלות</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>תאריך</th><th>שעה</th><th>כיוון</th><th>תחנה</th>
+            <th>טלפון</th><th>מקומות</th><th>קוד</th><th>סטטוס</th>
+          </tr></thead>
+          <tbody id="bookingsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>מופעל על ידי</span>
+    <a href="https://tzvi-mark.uk" target="_blank" rel="noopener" class="footer-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      MARK Automations
+    </a>
+  </div>
+</div>
+
+<script>
+  const STORE_KEY = 'sr_ceo_token';
+  let token = localStorage.getItem(STORE_KEY) || null;
+  let currentView = 'overview';
+  let currentStatus = '';
+  const $ = id => document.getElementById(id);
+
+  // ===== Date helpers =====
+  function isoDate(d) { return d.toISOString().slice(0,10); }
+  function setRange(range) {
+    const to = new Date();
+    let from = new Date();
+    if (range === 'today') { /* from=to */ }
+    else if (range === 'week') from.setDate(from.getDate() - 6);
+    else if (range === 'month') from.setDate(from.getDate() - 29);
+    $('fromDate').value = isoDate(from);
+    $('toDate').value = isoDate(to);
+  }
+
+  // ===== Login =====
+  async function doLogin() {
+    const pw = $('pw').value.trim();
+    if (!pw) return;
+    $('loginBtn').disabled = true; $('loginErr').textContent = '';
+    try {
+      const r = await fetch('/admin/ceo-login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({password: pw}) });
+      if (!r.ok) { $('loginErr').textContent = 'סיסמה שגויה'; $('loginBtn').disabled = false; return; }
+      const d = await r.json();
+      token = d.token; localStorage.setItem(STORE_KEY, token);
+      showApp();
+    } catch { $('loginErr').textContent = 'שגיאת חיבור'; $('loginBtn').disabled = false; }
+  }
+  function logout() { localStorage.removeItem(STORE_KEY); token = null; $('app').classList.remove('active'); $('loginWrap').style.display='flex'; $('pw').value=''; $('loginBtn').disabled=false; }
+
+  function showApp() { $('loginWrap').style.display='none'; $('app').classList.add('active'); setRange('week'); loadData(); }
+
+  // ===== Data =====
+  async function loadData() {
+    if (currentView === 'overview') await loadStats();
+    else await loadBookings();
+  }
+
+  async function loadStats() {
+    const from = $('fromDate').value, to = $('toDate').value;
+    $('statsGrid').innerHTML = '<div class="state" style="grid-column:1/-1"><div class="spinner"></div></div>';
+    try {
+      const r = await fetch(`/admin/ceo-stats?from=${from}&to=${to}`, { headers: {'x-auth': token} });
+      if (r.status === 401) { logout(); return; }
+      const d = await r.json();
+      renderStats(d);
+    } catch { $('statsGrid').innerHTML = '<div class="state" style="grid-column:1/-1"><div class="title">שגיאה בטעינה</div></div>'; }
+  }
+
+  function renderStats(d) {
+    const t = d.totals;
+    $('statsGrid').innerHTML = `
+      <div class="stat-card"><div class="icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><div class="num">${t.active_bookings}</div><div class="lbl">הזמנות פעילות</div></div>
+      <div class="stat-card"><div class="icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="num">${t.total_seats}</div><div class="lbl">מקומות סה״כ</div></div>
+      <div class="stat-card"><div class="icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div><div class="num">${t.unique_phones}</div><div class="lbl">מזמינים שונים</div></div>
+      <div class="stat-card"><div class="icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg></div><div class="num">${t.cancelled_bookings}</div><div class="lbl">בוטלו</div></div>
+    `;
+
+    // Ride bars
+    const maxSeats = Math.max(...d.by_ride.map(r => r.seats), 1);
+    $('rideBars').innerHTML = d.by_ride.map(r => {
+      const dc = r.direction === 'beitar_hadassah' ? 'beitar' : 'hadassah';
+      const pct = (r.seats / maxSeats) * 100;
+      return `<div class="bar-row"><span class="bar-label">${r.departure_time}</span><div class="bar-track"><div class="bar-fill ${dc}" style="width:${pct}%"></div></div><span class="bar-val">${r.seats}</span></div>`;
+    }).join('');
+
+    // Direction donut
+    const b = d.by_direction.beitar, h = d.by_direction.hadassah, tot = b + h || 1;
+    const bPct = Math.round((b/tot)*100), hPct = 100 - bPct;
+    const circ = 2 * Math.PI * 42;
+    const bLen = (b/tot) * circ;
+    $('directionChart').innerHTML = `
+      <svg width="140" height="140" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="42" fill="none" stroke="#e5a04d" stroke-width="14"/>
+        <circle cx="50" cy="50" r="42" fill="none" stroke="var(--beitar)" stroke-width="14" stroke-dasharray="${bLen} ${circ}" transform="rotate(-90 50 50)"/>
+        <text x="50" y="47" text-anchor="middle" font-size="17" font-weight="800" fill="var(--ink)">${tot}</text>
+        <text x="50" y="60" text-anchor="middle" font-size="8" font-weight="600" fill="var(--ink-soft)">מקומות</text>
+      </svg>
+      <div class="donut-legend">
+        <div class="legend-item"><span class="legend-dot beitar"></span><span class="legend-text"><span class="v">${b}</span> <span class="l">ביתר ← הדסה (${bPct}%)</span></span></div>
+        <div class="legend-item"><span class="legend-dot hadassah"></span><span class="legend-text"><span class="v">${h}</span> <span class="l">הדסה ← ביתר (${hPct}%)</span></span></div>
+      </div>
+    `;
+
+    // Daily chart
+    const maxDaily = Math.max(...d.daily.map(x => x.seats), 1);
+    if (d.daily.length === 0) {
+      $('dailyChart').innerHTML = '<div class="state" style="width:100%"><div class="title">אין נתונים לתקופה</div></div>';
+    } else {
+      $('dailyChart').innerHTML = d.daily.map(day => {
+        const h = (day.seats / maxDaily) * 100;
+        const dObj = new Date(day.day + 'T00:00:00');
+        const label = dObj.toLocaleDateString('he-IL', { day:'numeric', month:'numeric' });
+        return `<div class="split-col"><span class="split-num">${day.seats}</span><div class="split-bar beitar" style="height:${h}%"></div><span class="split-day">${label}</span></div>`;
+      }).join('');
+    }
+  }
+
+  async function loadBookings() {
+    const from = $('fromDate').value, to = $('toDate').value;
+    $('bookingsBody').innerHTML = '<tr><td colspan="8"><div class="state"><div class="spinner"></div></div></td></tr>';
+    try {
+      const url = `/admin/ceo-bookings?from=${from}&to=${to}${currentStatus ? '&status='+currentStatus : ''}`;
+      const r = await fetch(url, { headers: {'x-auth': token} });
+      if (r.status === 401) { logout(); return; }
+      const d = await r.json();
+      renderBookings(d);
+    } catch { $('bookingsBody').innerHTML = '<tr><td colspan="8"><div class="state"><div class="title">שגיאה בטעינה</div></div></td></tr>'; }
+  }
+
+  function renderBookings(d) {
+    $('bookingsCount').textContent = `(${d.count})`;
+    if (!d.bookings.length) {
+      $('bookingsBody').innerHTML = '<tr><td colspan="8"><div class="state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><div class="title">אין הזמנות בתקופה זו</div></div></td></tr>';
+      return;
+    }
+    $('bookingsBody').innerHTML = d.bookings.map(b => {
+      const dc = b.direction === 'beitar_hadassah' ? 'beitar' : 'hadassah';
+      const dirLabel = b.direction === 'beitar_hadassah' ? 'ביתר ← הדסה' : 'הדסה ← ביתר';
+      const time = b.ride_label.match(/\d{2}:\d{2}/)?.[0] || '';
+      const dObj = new Date(b.date + 'T00:00:00');
+      const dateLabel = dObj.toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'2-digit' });
+      return `<tr>
+        <td>${dateLabel}</td>
+        <td class="cell-time">${time}</td>
+        <td><span class="dir-tag ${dc}">${dirLabel}</span></td>
+        <td>${b.station_name}</td>
+        <td class="cell-phone">${b.phone}</td>
+        <td><span class="seats-tag">${b.seats_count}</span></td>
+        <td class="cell-code">${b.booking_code}</td>
+        <td><span class="status-tag ${b.status}">${b.status === 'active' ? 'פעילה' : 'בוטלה'}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ===== Events =====
+  $('loginBtn').addEventListener('click', doLogin);
+  $('pw').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  $('logoutBtn').addEventListener('click', logout);
+
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    currentView = t.dataset.view;
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    $('view-' + currentView).classList.add('active');
+    loadData();
+  }));
+
+  document.querySelectorAll('.quick-btn').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.quick-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    setRange(b.dataset.range);
+    loadData();
+  }));
+
+  ['fromDate','toDate'].forEach(id => $(id).addEventListener('change', () => {
+    document.querySelectorAll('.quick-btn').forEach(x => x.classList.remove('active'));
+    loadData();
+  }));
+
+  document.querySelectorAll('.sf-btn').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.sf-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    currentStatus = b.dataset.status;
+    loadBookings();
+  }));
+
+  if (token) showApp();
+</script>
+</body>
+</html>

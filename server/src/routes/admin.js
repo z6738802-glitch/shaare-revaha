@@ -27,6 +27,26 @@ function requireAuth(req, res, next) {
   res.status(401).json({ error: 'unauthorized' });
 }
 
+// ────────────────────────────────────────────────
+// POST /admin/ceo-login — אימות סיסמת מנכ"ל
+// ────────────────────────────────────────────────
+router.post('/ceo-login', express.json(), (req, res) => {
+  const { password } = req.body || {};
+  const correct = process.env.CEO_PASSWORD || 'ceo1234';
+  if (password && password === correct) {
+    res.json({ success: true, token: correct });
+  } else {
+    res.status(401).json({ success: false });
+  }
+});
+
+function requireCeo(req, res, next) {
+  const token = req.headers['x-auth'] || req.query.token;
+  const correct = process.env.CEO_PASSWORD || 'ceo1234';
+  if (token === correct) return next();
+  res.status(401).json({ error: 'unauthorized' });
+}
+
 // עזר: שם נסיעה לפי id
 function rideLabel(rideId) {
   const ride = RIDES.find(r => r.id === rideId);
@@ -204,6 +224,122 @@ router.get('/history', async (req, res) => {
     }));
 
     res.json({ from, to, rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+// ────────────────────────────────────────────────
+// GET /admin/ceo-stats?from=&to= — סטטיסטיקות לטווח
+// ────────────────────────────────────────────────
+router.get('/ceo-stats', requireCeo, async (req, res) => {
+  const from = req.query.from || todayIL();
+  const to = req.query.to || todayIL();
+
+  try {
+    // סיכום כללי
+    const totals = await pool.query(
+      `SELECT
+         COUNT(*) FILTER (WHERE status='active') AS active_bookings,
+         COUNT(*) FILTER (WHERE status='cancelled') AS cancelled_bookings,
+         COALESCE(SUM(seats_count) FILTER (WHERE status='active'),0) AS total_seats,
+         COUNT(DISTINCT phone) FILTER (WHERE status='active') AS unique_phones
+       FROM shaare_revaha.bookings
+       WHERE date BETWEEN $1 AND $2`,
+      [from, to]
+    );
+
+    // פילוח לפי כיוון
+    const byDirection = await pool.query(
+      `SELECT ride_id, COALESCE(SUM(seats_count) FILTER (WHERE status='active'),0) AS seats
+       FROM shaare_revaha.bookings
+       WHERE date BETWEEN $1 AND $2
+       GROUP BY ride_id`,
+      [from, to]
+    );
+
+    let beitarSeats = 0, hadassahSeats = 0;
+    byDirection.rows.forEach(r => {
+      const seats = parseInt(r.seats);
+      if (r.ride_id <= 4) beitarSeats += seats;
+      else hadassahSeats += seats;
+    });
+
+    // פילוח יומי (לגרף)
+    const daily = await pool.query(
+      `SELECT date::text AS day,
+              COALESCE(SUM(seats_count) FILTER (WHERE status='active'),0) AS seats,
+              COUNT(*) FILTER (WHERE status='active') AS bookings
+       FROM shaare_revaha.bookings
+       WHERE date BETWEEN $1 AND $2
+       GROUP BY date ORDER BY date`,
+      [from, to]
+    );
+
+    // פילוח לפי שעת נסיעה (הנסיעות הפופולריות)
+    const byRide = await pool.query(
+      `SELECT ride_id, COALESCE(SUM(seats_count) FILTER (WHERE status='active'),0) AS seats
+       FROM shaare_revaha.bookings
+       WHERE date BETWEEN $1 AND $2
+       GROUP BY ride_id ORDER BY ride_id`,
+      [from, to]
+    );
+
+    const t = totals.rows[0];
+    res.json({
+      from, to,
+      totals: {
+        active_bookings: parseInt(t.active_bookings),
+        cancelled_bookings: parseInt(t.cancelled_bookings),
+        total_seats: parseInt(t.total_seats),
+        unique_phones: parseInt(t.unique_phones),
+      },
+      by_direction: { beitar: beitarSeats, hadassah: hadassahSeats },
+      daily: daily.rows.map(d => ({ day: d.day, seats: parseInt(d.seats), bookings: parseInt(d.bookings) })),
+      by_ride: RIDES.map(r => {
+        const found = byRide.rows.find(x => x.ride_id === r.id);
+        return { id: r.id, label: r.label, departure_time: r.departure_time, direction: r.direction, seats: found ? parseInt(found.seats) : 0 };
+      }),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+// ────────────────────────────────────────────────
+// GET /admin/ceo-bookings?from=&to=&status= — כל ההזמנות לטווח
+// ────────────────────────────────────────────────
+router.get('/ceo-bookings', requireCeo, async (req, res) => {
+  const from = req.query.from || todayIL();
+  const to = req.query.to || todayIL();
+  const status = req.query.status; // active / cancelled / undefined=all
+
+  try {
+    let query = `
+      SELECT id, phone, date::text, ride_id, neighborhood, station, seats_count,
+             booking_code, status, created_at, cancelled_at
+      FROM shaare_revaha.bookings
+      WHERE date BETWEEN $1 AND $2`;
+    const params = [from, to];
+
+    if (status === 'active' || status === 'cancelled') {
+      query += ` AND status = $3`;
+      params.push(status);
+    }
+    query += ` ORDER BY date DESC, ride_id ASC, created_at ASC`;
+
+    const result = await pool.query(query, params);
+
+    const bookings = result.rows.map(b => ({
+      ...b,
+      ride_label: rideLabel(b.ride_id),
+      station_name: stationName(b.neighborhood, b.station),
+      direction: b.ride_id <= 4 ? 'beitar_hadassah' : 'hadassah_beitar',
+    }));
+
+    res.json({ from, to, count: bookings.length, bookings });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'server error' });

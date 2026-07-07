@@ -28,6 +28,11 @@ app.use('/debug', debugRouter);
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
+// דף מנכ"ל
+app.get('/ceo', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'dashboard', 'ceo.html'));
+});
+
 const PORT = process.env.PORT || 3000;
 
 // הקמת טבלת לוגים ותזמון ניקוי יומי
